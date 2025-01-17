@@ -8,13 +8,18 @@
     <style>
         .container {
             display: flex;
-            gap: 40px;
-            padding: 20px;
+            gap: 20px;
+            padding: 10px;
+            height: 60vh;   
+            min-height: 300px;
+            max-height: 600px;
         }
 
         /* Lap Count Table Styles */
         .lap-count {
             flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         table {
@@ -24,8 +29,9 @@
 
         table, th, td {
             border: 1px solid black;
-            padding: 8px;
+            padding: 4px;
             text-align: center;
+            font-size: clamp(12px, 1.5vh, 14px);
         }
 
         /* Add ranking styles */
@@ -38,33 +44,71 @@
         .scanner-display {
             flex: 1;
             border: 1px solid black;
-            padding: 20px;
-            max-height: 80vh;
-            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
 
         .beacon-container {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 5px;
             flex-wrap: wrap;
+            overflow-y: auto;
+            max-height: calc(100% - 50px);
+            align-content: flex-start;
+            padding-right: 5px;
         }
 
         .beacon {
-            width: 40px;
-            height: 40px;
-            border: 2px solid black;
-            border-radius: 5px;
+            width: clamp(25px, 4vh, 35px);
+            height: clamp(25px, 4vh, 35px);
+            border: 1px solid black;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            flex-shrink: 0;
+            font-size: clamp(10px, 1.2vh, 14px);
         }
 
         .latest-label {
-            margin-top: 20px;
+            margin-top: 10px;
             font-style: italic;
+            flex-shrink: 0;
+            font-size: clamp(10px, 1.2vh, 12px);
+        }
+
+        h2 {
+            font-size: clamp(14px, 1.8vh, 16px);
+            margin: 0 0 10px 0;
+        }
+
+        #clearButton {
+            margin-top: 10px;
+            padding: 4px 8px;
+            font-size: clamp(10px, 1.2vh, 12px);
+        }
+
+        /* Custom scrollbar styles */
+        .beacon-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .beacon-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .beacon-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .beacon-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 
