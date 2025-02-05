@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="jquery.js"></script>
     <title>Scanner Data</title>
     <style>
         .container {
@@ -29,9 +29,18 @@
 
         table, th, td {
             border: 1px solid black;
-            padding: 4px;
+            padding: 8px;
             text-align: center;
-            font-size: clamp(12px, 1.5vh, 14px);
+        }
+
+        @keyframes blink {
+            0% { background-color: yellow; }
+            50% { background-color: transparent; }
+            100% { background-color: yellow; }
+        }
+
+        .blinking {
+            animation: blink 2s infinite;
         }
 
         /* Add ranking styles */
@@ -58,6 +67,8 @@
             max-height: calc(100% - 50px);
             align-content: flex-start;
             padding-right: 5px;
+            flex-direction: row-reverse;
+            justify-content: flex-end;
         }
 
         .beacon {
@@ -113,45 +124,54 @@
     </style>
 
     <script>
-        $(document).ready(function() {
+        $(function() {
             function updateDisplay() {
                 $.ajax({
                     url: "getminor.php",
                     type: 'GET',
                     success: function(response) {
                         const data = JSON.parse(response);
-                        
-                        // Sort players by count first, then by timestamp
-                        let sortedPlayers = data.players.sort((a, b) => {
-                            if (b.count !== a.count) {
-                                return b.count - a.count; // First sort by count (descending)
+                        const existingMinors = {};
+
+                        // Update existing rows and track existing minors
+                        $("tr").each(function() {
+                            const minorCell = $(this).find("td:first");
+                            const occurrenceCell = $(this).find(".count");
+                            const minorValue = minorCell.text().trim();
+
+                            if (data.counts[minorValue]) {
+                                existingMinors[minorValue] = true;
+                                const newOccurrence = data.counts[minorValue];
+
+                                if (occurrenceCell.text().trim() !== newOccurrence.toString()) {
+                                    occurrenceCell.text(newOccurrence);
+                                    // Changed to prepend
+                                    $(".beacon-container").prepend(`<div class="beacon">${minorValue}</div>`);
+                                    if (occurrenceCell.css('background-color') === 'rgb(255, 255, 0)') {
+                                        occurrenceCell.css('background-color', '#ADD8E6');
+                                    } else {
+                                        occurrenceCell.css('background-color', 'yellow');
+                                    }
+                                }
                             }
-                            // If counts are equal, sort by timestamp (ascending)
-                            return new Date(a.first_timestamp) - new Date(b.first_timestamp);
                         });
 
-                        // Update table
-                        $("table tbody").empty();
-                        $("table tbody").append("<tr><th>Rank</th><th>Player</th><th>Count</th></tr>");
-                        
-                        // Add sorted rows with rank
-                        sortedPlayers.forEach((player, index) => {
-                            $("table tbody").append(`
-                                <tr>
-                                    <td class="rank">${index + 1}</td>
-                                    <td>${player.minor}</td>
-                                    <td class='count'>${player.count}</td>
-                                </tr>
-                            `);
-                        });
+                        // Add new rows for any new minors
+                        for (const minor in data.counts) {
+                            if (!existingMinors[minor]) {
+                                $("table").append(`<tr><td>${minor}</td><td class='count'>${data.counts[minor]}</td></tr>`);
+                                // Changed to prepend
+                                $(".beacon-container").prepend(`<div class="beacon">${minor}</div>`);
+                            }
+                        }
 
-                        // Update beacon display with all beacons from database
-                        $(".beacon-container").empty();
-                        data.recent_beacons.forEach((minor) => {
-                            $(".beacon-container").append(`
-                                <div class="beacon">${minor}</div>
-                            `);
-                        });
+                        // Update beacon container with all scans
+                        if (data.scans && data.scans.length > 0) {
+                            data.scans.forEach(minor => {
+                                // Changed to prepend
+                                $(".beacon-container").prepend(`<div class="beacon">${minor}</div>`);
+                            });
+                        }
                     },
                     error: function() {
                         console.log("Error occurred while fetching data.");
@@ -162,13 +182,15 @@
             // Call updateDisplay every second
             setInterval(updateDisplay, 1000);
 
+            // Clear button functionality
             $("#clearButton").click(function() {
                 $.ajax({
                     url: "clearData.php",
                     type: 'GET',
                     success: function(response) {
                         console.log(response);
-                        $("table tbody").html("<tr><th>Rank</th><th>Player</th><th>Count</th></tr>");
+                        // Clear both the table and beacon container
+                        $("table").find("tr:gt(0)").remove();
                         $(".beacon-container").empty();
                     },
                     error: function(xhr, status, error) {
@@ -184,9 +206,7 @@
         <div class="lap-count">
             <h2>Lap Count Ranking</h2>
             <table>
-                <tbody>
-                    <tr><th>Rank</th><th>Player</th><th>Count</th></tr>
-                </tbody>
+                <tr><th>Minor</th><th>Occurrence</th></tr>
             </table>
             <button id="clearButton">Clear All Data</button>
         </div>
