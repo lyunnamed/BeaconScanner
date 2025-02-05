@@ -2,10 +2,10 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-$servername = "localhost";
-$username = "root";
-$password = ""; // Use the appropriate password for your MySQL
-$dbname = "crosscountry";
+$servername = "";
+$username = "";
+$password = "";
+$dbname = "";
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -15,16 +15,14 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Clear all records from the beacon table
-$sql = "DELETE FROM beacon";
+// SQL query to delete all rows from the scanner table
+$sql = "TRUNCATE TABLE scanner";
 
 if ($conn->query($sql) === TRUE) {
-    // Reset auto-increment after clearing
-    $sql = "ALTER TABLE beacon AUTO_INCREMENT = 1";
-    $conn->query($sql);
     echo "All data cleared successfully";
 } else {
-    echo "Error clearing data: " . $conn->error . " (SQL: $sql)";
+    // Provide detailed error message
+    echo "Error clearing data: " . $conn->error;
 }
 
 $conn->close();
