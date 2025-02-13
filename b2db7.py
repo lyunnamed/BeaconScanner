@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration
-PHP_ENDPOINT = "http://10.42.0.1/process_beacon.php"
+PHP_ENDPOINT = "http://ip_address/process_beacon.php"
 TARGET_UUID = "b9407f30-f5f8-466e-aff9-25556b57fe6d"  # Estimote UUID
 
 # Cache for recent scans and pending uploads
