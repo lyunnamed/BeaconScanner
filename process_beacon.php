@@ -1,6 +1,6 @@
 <?php
 // Database connection settings
-$DB_HOST = '';
+$DB_HOST = 'localhost';
 $DB_USER = '';
 $DB_PASSWORD = '';
 $DB_NAME = '';
@@ -25,42 +25,57 @@ if ($minor === null || $timestamp === null) {
 // Convert timestamp to a MySQL DATETIME format
 $datetime = date('Y-m-d H:i:s', $timestamp);
 
-// Check if the minor already exists in the database
-$sql = "SELECT * FROM `scanner` WHERE `minor` = ? ORDER BY `addedOn` DESC LIMIT 1";
-$stmt = $connection->prepare($sql);
-$stmt->bind_param("i", $minor);
-$stmt->execute();
-$result = $stmt->get_result();
+try {
+    // Start transaction
+    $connection->begin_transaction();
 
-if ($result->num_rows > 0) {
-    // Existing record found
-    $row = $result->fetch_assoc();
-    $last_time = strtotime($row['addedOn']);  // Convert the stored timestamp to UNIX time
-    $time_difference = $timestamp - $last_time;
-
-    if ($time_difference < 10) {
-        // If the time difference is less than 10 seconds, update the existing record
-        $update_sql = "UPDATE `scanner` SET `addedOn` = ? WHERE `rid` = ?";
+    // Try to insert a new record if the last record is older than 10 seconds
+    $insert_sql = "INSERT INTO scanner (minor)
+                   SELECT ?
+                   WHERE (
+                       SELECT TIMESTAMPDIFF(SECOND, MAX(addedOn), ?) > 10
+                       FROM scanner
+                       WHERE minor = ?
+                   ) OR NOT EXISTS (
+                       SELECT 1
+                       FROM scanner
+                       WHERE minor = ?
+                   )";
+    
+    $insert_stmt = $connection->prepare($insert_sql);
+    $insert_stmt->bind_param("isis", $minor, $datetime, $minor, $minor);
+    $insert_stmt->execute();
+    
+    if ($insert_stmt->affected_rows == 0) {
+        // No new record was inserted, update the latest record's timestamp
+        $update_sql = "UPDATE scanner 
+                      SET addedOn = ?
+                      WHERE rid = (
+                          SELECT rid FROM (
+                              SELECT rid
+                              FROM scanner
+                              WHERE minor = ?
+                              ORDER BY addedOn DESC
+                              LIMIT 1
+                          ) as latest
+                      )";
+        
         $update_stmt = $connection->prepare($update_sql);
-        $update_stmt->bind_param("si", $datetime, $row['rid']);
+        $update_stmt->bind_param("si", $datetime, $minor);
         $update_stmt->execute();
-        echo "Record updated for minor $minor.";
+        echo "Updated timestamp for minor $minor.";
     } else {
-        // If the time difference is 10 seconds or more, insert a new record
-        $insert_sql = "INSERT INTO `scanner` (`minor`, `addedOn`) VALUES (?, ?)";
-        $insert_stmt = $connection->prepare($insert_sql);
-        $insert_stmt->bind_param("is", $minor, $datetime);
-        $insert_stmt->execute();
         echo "New record added for minor $minor.";
     }
-} else {
-    // No existing record found, insert a new record
-    $insert_sql = "INSERT INTO `scanner` (`minor`, `addedOn`) VALUES (?, ?)";
-    $insert_stmt = $connection->prepare($insert_sql);
-    $insert_stmt->bind_param("is", $minor, $datetime);
-    $insert_stmt->execute();
-    echo "New record added for minor $minor.";
-}
 
-$connection->close();
+    // Commit transaction
+    $connection->commit();
+
+} catch (Exception $e) {
+    // Rollback on error
+    $connection->rollback();
+    echo "Error: " . $e->getMessage();
+} finally {
+    $connection->close();
+}
 ?>
